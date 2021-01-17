@@ -1,0 +1,43 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: pvdf
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: pvdf
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - persistentvolumes
+    verbs:
+      - get
+      - list
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: pvdf
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: pvdf
+subjects:
+  - kind: ServiceAccount
+    name: pvdf
+    namespace: default
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pvdf
+  labels:
+    app: pvdf
+spec:
+  containers:
+    - name: visitor
+      image: pvdf/pvdf
+  serviceAccountName: pvdf
