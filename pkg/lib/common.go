@@ -10,17 +10,22 @@ import (
 var log = logging.Log.WithFields(logrus.Fields{})
 
 
-// TODO: As parameters
-var procPath = "/proc"
-var rootfsPath string = "/"
-var statfsTimeout, _ = time.ParseDuration("5s")
-var Period, _ = time.ParseDuration("10s")
+//  Cli Parameters. Check main.go
+var ProcPath string
+var RootfsPath string
+var StatfsTimeout time.Duration
+var Period time.Duration
+
+
+var FreeAnnotation = "usage.pvdf.broadsoftware.com/free_mib"
+var SizeAnnotation = "usage.pvdf.broadsoftware.com/size_mib"
+
 
 func procFilePath(name string) string {
-	return filepath.Join(procPath, name)
+	return filepath.Join(ProcPath, name)
 }
 
 func rootfsFilePath(name string) string {
-	return filepath.Join(rootfsPath, name)
+	return filepath.Join(RootfsPath, name)
 }
 

@@ -3,6 +3,8 @@ package lib
 import (
 	"fmt"
 	"golang.org/x/sys/unix"
+	v1 "k8s.io/api/core/v1"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -109,7 +111,7 @@ func (this *Volume) GetStats() {
 	select {
 	case <-success:
 		// Success. Nothing more to do
-	case <-time.After(statfsTimeout):
+	case <-time.After(StatfsTimeout):
 		select {
 		case <-success:
 			// Success came in just after the timeout was reached. Nothing to do anymore
@@ -121,3 +123,34 @@ func (this *Volume) GetStats() {
 	}
 }
 
+
+func b2mib(x uint64) int {
+	return int(x/(1024*1025))
+}
+func (this *Volume) AdjustAnnotationsOn(pv v1.PersistentVolume) (dirty bool) {
+	free := b2mib(this.Stats.Free)
+	oldFreeStr, ok := pv.Annotations[FreeAnnotation]
+	if ok {
+		oldFree, _ := strconv.Atoi(oldFreeStr)
+		if oldFree != free {
+			dirty = true
+			pv.Annotations[FreeAnnotation] = strconv.Itoa(free)
+		}
+	} else {
+		dirty = true
+		pv.Annotations[FreeAnnotation] = strconv.Itoa(free)
+	}
+	size := b2mib(this.Stats.Size)
+	oldSizeStr, ok := pv.Annotations[SizeAnnotation]
+	if ok {
+		oldSize, _ := strconv.Atoi(oldSizeStr)
+		if oldSize != size {
+			dirty = true
+			pv.Annotations[SizeAnnotation] = strconv.Itoa(size)
+		}
+	} else {
+		dirty = true
+		pv.Annotations[SizeAnnotation] = strconv.Itoa(size)
+	}
+	return dirty
+}

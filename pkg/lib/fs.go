@@ -65,10 +65,10 @@ func ListFileSystems() ([]Filesystem, error) {
 
 
 func rootfsStripPrefix(path string) string {
-	if rootfsPath == "/" {
+	if RootfsPath == "/" {
 		return path
 	}
-	stripped := strings.TrimPrefix(path, rootfsPath)
+	stripped := strings.TrimPrefix(path, RootfsPath)
 	if stripped == "" {
 		return "/"
 	}
