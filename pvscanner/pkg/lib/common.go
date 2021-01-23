@@ -1,7 +1,7 @@
 package lib
 
 import (
-	"github.com/BROADSoftware/pvdf/pkg/logging"
+	"github.com/BROADSoftware/pvdf/pvscanner/pkg/logging"
 	"github.com/sirupsen/logrus"
 	"path/filepath"
 	"time"
@@ -17,8 +17,8 @@ var StatfsTimeout time.Duration
 var Period time.Duration
 
 
-var FreeAnnotation = "usage.pvdf.broadsoftware.com/free_mib"
-var SizeAnnotation = "usage.pvdf.broadsoftware.com/size_mib"
+var FreeAnnotation = "pvscanner.pvdf.broadsoftware.com/free_mib"
+var SizeAnnotation = "pvscanner.pvdf.broadsoftware.com/size_mib"
 
 
 func procFilePath(name string) string {

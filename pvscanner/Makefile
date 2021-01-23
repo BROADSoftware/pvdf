@@ -1,14 +1,17 @@
 
 # Image URL to use all building/pushing image targets
 VERSION ?= latest
-IMG ?= pvdf/pvdf:$(VERSION)
+IMG ?= pvdf/pvscanner:$(VERSION)
 
 # Currently, only unix executable are generated.
 GOARGS = GOOS=linux GOARCH=amd64
 
+default:
+	@echo "Provide a target (build, push or pvscanner)"
+
 # Build an executable for local test (Use only on linux system)
-pvdf:
-	$(GOARGS) go build -o ./pvdf
+pvscanner:
+	$(GOARGS) go build -o ./pvscanner
 
 build:
 	docker build . -t ${IMG}

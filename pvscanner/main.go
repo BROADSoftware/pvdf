@@ -3,8 +3,8 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/BROADSoftware/pvdf/pkg/lib"
-	"github.com/BROADSoftware/pvdf/pkg/logging"
+	"github.com/BROADSoftware/pvdf/pvscanner/pkg/lib"
+	"github.com/BROADSoftware/pvdf/pvscanner/pkg/logging"
 	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -34,7 +34,7 @@ func main() {
 	if lib.Period, err = time.ParseDuration(*period); err != nil {
 		log.Fatalf("Value '%s' is invalid as a duration for period paramter", *period)
 	}
-	log.Infof("pvdf start. Will scan PV every %s", *period)
+	log.Infof("pvscanner start. Will scan PV every %s", *period)
 
 	clientSet := lib.GetClientSet(*kubeconfig)
 	for true {

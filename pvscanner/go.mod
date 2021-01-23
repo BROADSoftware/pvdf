@@ -1,4 +1,4 @@
-module github.com/BROADSoftware/pvdf
+module github.com/BROADSoftware/pvdf/pvscanner
 
 go 1.15
 
