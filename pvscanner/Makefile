@@ -7,16 +7,17 @@ IMG ?= pvdf/pvscanner:$(VERSION)
 GOARGS = GOOS=linux GOARCH=amd64
 
 default:
-	@echo "Provide a target (build, push or pvscanner)"
+	@echo "Provide a target (build, img or push)"
 
 # Build an executable for local test (Use only on linux system)
-pvscanner:
+.PHONY: pvscanner
+build:
 	$(GOARGS) go build -o ./pvscanner
 
-build:
-	docker build . -t ${IMG}
+img:
+	cd ..; docker build -f pvscanner/Dockerfile . -t ${IMG}
 
-push: build
+push: img
 	docker push ${IMG}
 
 

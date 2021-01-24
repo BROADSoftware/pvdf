@@ -3,6 +3,7 @@ package lib
 import (
 	"fmt"
 	"golang.org/x/sys/unix"
+	"github.com/BROADSoftware/pvdf/shared/common"
 	v1 "k8s.io/api/core/v1"
 	"strconv"
 	"strings"
@@ -129,28 +130,28 @@ func b2mib(x uint64) int {
 }
 func (this *Volume) AdjustAnnotationsOn(pv v1.PersistentVolume) (dirty bool) {
 	free := b2mib(this.Stats.Free)
-	oldFreeStr, ok := pv.Annotations[FreeAnnotation]
+	oldFreeStr, ok := pv.Annotations[common.FreeAnnotation]
 	if ok {
 		oldFree, _ := strconv.Atoi(oldFreeStr)
 		if oldFree != free {
 			dirty = true
-			pv.Annotations[FreeAnnotation] = strconv.Itoa(free)
+			pv.Annotations[common.FreeAnnotation] = strconv.Itoa(free)
 		}
 	} else {
 		dirty = true
-		pv.Annotations[FreeAnnotation] = strconv.Itoa(free)
+		pv.Annotations[common.FreeAnnotation] = strconv.Itoa(free)
 	}
 	size := b2mib(this.Stats.Size)
-	oldSizeStr, ok := pv.Annotations[SizeAnnotation]
+	oldSizeStr, ok := pv.Annotations[common.SizeAnnotation]
 	if ok {
 		oldSize, _ := strconv.Atoi(oldSizeStr)
 		if oldSize != size {
 			dirty = true
-			pv.Annotations[SizeAnnotation] = strconv.Itoa(size)
+			pv.Annotations[common.SizeAnnotation] = strconv.Itoa(size)
 		}
 	} else {
 		dirty = true
-		pv.Annotations[SizeAnnotation] = strconv.Itoa(size)
+		pv.Annotations[common.SizeAnnotation] = strconv.Itoa(size)
 	}
 	return dirty
 }

@@ -17,16 +17,22 @@ var logLevelByString = map[string]logrus.Level{
 	"TRACE": logrus.TraceLevel,
 }
 
+
+// To be overridden by CLI parameters
+var Level string = "INFO"
+var LogJson bool
+
+
 var Log *logrus.Logger
 
-func ConfigLogger(level string, json bool) {
-	llevel := logLevelByString[strings.ToUpper(level)]
+func ConfigLogger() {
+	llevel := logLevelByString[strings.ToUpper(Level)]
 	if llevel == 0 {
-		_, _ = fmt.Fprintf(os.Stderr, "\nInvalid -logLevel value '%s'. Must be one of PANIC, FATAL, WARNING, WARN, INFO, DEBUG or TRACE\n", level)
+		_, _ = fmt.Fprintf(os.Stderr, "\nInvalid -logLevel value '%s'. Must be one of PANIC, FATAL, WARNING, WARN, INFO, DEBUG or TRACE\n", Level)
 		os.Exit(2)
 	}
 	Log.SetLevel(llevel)
-	if json {
+	if LogJson {
 		Log.SetFormatter(&logrus.JSONFormatter{})
 	} else {
 		Log.SetFormatter(&logrus.TextFormatter{})
@@ -36,5 +42,5 @@ func ConfigLogger(level string, json bool) {
 func init() {
 	Log = logrus.New()
 	Log.Out = os.Stdout
-	ConfigLogger("INFO", true)
+	ConfigLogger()
 }

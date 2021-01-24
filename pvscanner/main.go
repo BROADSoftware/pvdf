@@ -4,28 +4,28 @@ import (
 	"flag"
 	"fmt"
 	"github.com/BROADSoftware/pvdf/pvscanner/pkg/lib"
-	"github.com/BROADSoftware/pvdf/pvscanner/pkg/logging"
+	"github.com/BROADSoftware/pvdf/shared/common"
+	"github.com/BROADSoftware/pvdf/shared/pkg/clientgo"
+	"github.com/BROADSoftware/pvdf/shared/pkg/logging"
 	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"time"
 )
 
-
 var log = logging.Log.WithFields(logrus.Fields{})
 
-
 func main() {
-	logLevel := flag.String("logLevel", "INFO", "Log message verbosity")
-	logJson := flag.Bool("logJson", false, "logs in JSON")
-	kubeconfig := flag.String("kubeconfig", "", "kubeconfig file")
+	flag.StringVar(&logging.Level, "logLevel", "INFO", "Log message verbosity")
+	flag.BoolVar(&logging.LogJson, "logJson", false, "logs in JSON")
+	flag.StringVar(&clientgo.Kubeconfig, "kubeconfig", "", "kubeconfig file")
 	flag.StringVar(&lib.ProcPath, "procPath", "/proc", "proc device path")
 	flag.StringVar(&lib.RootfsPath, "rootFsPath", "/", "root FS path")
 	statfsTimeout := flag.String("statFsTimeout", "5s", "Timeout on syscall failure")
 	period := flag.String("period", "60s", "Scan period")
 	flag.Parse()
 
-	logging.ConfigLogger(*logLevel, *logJson)
+	logging.ConfigLogger()
 
 	var err error
 	if lib.StatfsTimeout, err = time.ParseDuration(*statfsTimeout); err != nil {
@@ -34,9 +34,9 @@ func main() {
 	if lib.Period, err = time.ParseDuration(*period); err != nil {
 		log.Fatalf("Value '%s' is invalid as a duration for period paramter", *period)
 	}
-	log.Infof("pvscanner start. Will scan PV every %s", *period)
+	log.Infof("pvscanner start. Will scan PV every %s. logLevel is '%s'", *period, logging.Level)
 
-	clientSet := lib.GetClientSet(*kubeconfig)
+	clientSet := clientgo.GetClientSet()
 	for true {
 		log.Debugf("------------------------")
 		work(clientSet)
@@ -80,14 +80,14 @@ func work(clientSet *kubernetes.Clientset) {
 					if err != nil {
 						log.Errorf("Unable to udpate usage information on PV '%s'", volume.Name)
 					} else {
-						log.Infof("Udpate usage information for PV '%s' (size_mib:%s  free_mib:%s)", volume.Name, pv.Annotations[lib.SizeAnnotation], pv.Annotations[lib.FreeAnnotation])
+						log.Infof("Udpate usage information for PV '%s' (size_mib:%s  free_mib:%s)", volume.Name, pv.Annotations[common.SizeAnnotation], pv.Annotations[common.FreeAnnotation])
 					}
 				}
 			} else {
 				log.Warnf("PV: '%s': Error:%s  (Usage annotation will be removed)", volume.Name, volume.Stats.Error)
 				// In such case, better to remove our annotations
-				delete(pv.Annotations, lib.FreeAnnotation)
-				delete(pv.Annotations, lib.SizeAnnotation)
+				delete(pv.Annotations, common.FreeAnnotation)
+				delete(pv.Annotations, common.SizeAnnotation)
 				_, err = clientSet.CoreV1().PersistentVolumes().Update(&pv)
 				if err != nil {
 					log.Errorf("Unable to udpate usage information on PV '%s'", volume.Name)
