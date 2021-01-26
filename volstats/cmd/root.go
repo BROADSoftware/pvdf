@@ -4,10 +4,12 @@ import (
 	"fmt"
 	"github.com/BROADSoftware/pvdf/shared/pkg/clientgo"
 	"github.com/BROADSoftware/pvdf/shared/pkg/logging"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"os"
 )
 
+var log = logging.Log.WithFields(logrus.Fields{})
 
 var rootCmd = &cobra.Command{
 	Use:   "pvstatus",
