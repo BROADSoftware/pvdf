@@ -1,11 +1,13 @@
 package lib
 
 import (
+	"github.com/BROADSoftware/pvdf/shared/common"
 	"github.com/BROADSoftware/pvdf/shared/pkg/logging"
 	"github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
+	"strconv"
 )
 
 var log = logging.Log.WithFields(logrus.Fields{})
@@ -14,11 +16,15 @@ type PvExt struct {
 	pv        *v1.PersistentVolume
 	pvc       *v1.PersistentVolumeClaim
 	pod       *v1.Pod
-	Name 	  string
-	Namespace string
-	Node      string
-	Capacity  string
-	PodName   string
+	Name 	  string	`json:"name"`
+	Namespace string	`json:"namespace"`
+	Node      string	`json:"node"`
+	Capacity  string	`json:"capacity"`
+	PodName   string	`json:"pod"`
+	StorageClass string	`json:"storageclass"`
+	Free   int64		`json:"free"`
+	Size   int64		`json:"size"`
+	Used_pc   int		`json:"usedpercent"`
 }
 
 type PvExtList []PvExt
@@ -38,6 +44,7 @@ func NewPvExtList(clientSet *kubernetes.Clientset) PvExtList {
 		pvExtList[i].fillinName()
 		pvExtList[i].fillinNode()
 		pvExtList[i].fillinCapacity()
+		pvExtList[i].fillinStats()
 	}
 	pvExtList.fillinPvc(clientSet)
 	pvExtList.fillinPod(clientSet)
@@ -45,6 +52,7 @@ func NewPvExtList(clientSet *kubernetes.Clientset) PvExtList {
 }
 func (this *PvExt) fillinName() {
 	this.Name = this.pv.Name
+	this.StorageClass = this.pv.Spec.StorageClassName
 }
 
 func (this *PvExt) fillinNode() {
@@ -54,6 +62,28 @@ func (this *PvExt) fillinNode() {
 		len(this.pv.Spec.NodeAffinity.Required.NodeSelectorTerms[0].MatchExpressions) > 0 &&
 		len(this.pv.Spec.NodeAffinity.Required.NodeSelectorTerms[0].MatchExpressions[0].Values) > 0 {
 		this.Node = this.pv.Spec.NodeAffinity.Required.NodeSelectorTerms[0].MatchExpressions[0].Values[0]
+	}
+}
+
+func (this *PvExt) fillinStats() {
+	size_mb, ok := this.pv.Annotations[common.SizeAnnotation]
+	if ok {
+		this.Size, _ = strconv.ParseInt(size_mb, 10, 64)
+		this.Size *= 1024*1024
+	} else {
+		this.Size = -1
+	}
+	free_mb, ok := this.pv.Annotations[common.FreeAnnotation]
+	if ok {
+		this.Free, _ = strconv.ParseInt(free_mb, 10, 64)
+		this.Free *= 1024*1024
+	} else {
+		this.Free = -1
+	}
+	if this.Size != -1 && this.Free != -1 {
+		this.Used_pc = int(((this.Size-this.Free)*100)/this.Size)
+	} else {
+		this.Used_pc = -1
 	}
 }
 
