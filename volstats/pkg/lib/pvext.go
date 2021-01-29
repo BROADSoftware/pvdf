@@ -66,14 +66,14 @@ func (this *PvExt) fillinNode() {
 }
 
 func (this *PvExt) fillinStats() {
-	size_mb, ok := this.pv.Annotations[common.SizeAnnotation]
+	size_mb, ok := this.pv.Annotations[common.PvSizeAnnotation]
 	if ok {
 		this.Size, _ = strconv.ParseInt(size_mb, 10, 64)
 		this.Size *= 1024*1024
 	} else {
 		this.Size = -1
 	}
-	free_mb, ok := this.pv.Annotations[common.FreeAnnotation]
+	free_mb, ok := this.pv.Annotations[common.PvFreeAnnotation]
 	if ok {
 		this.Free, _ = strconv.ParseInt(free_mb, 10, 64)
 		this.Free *= 1024*1024

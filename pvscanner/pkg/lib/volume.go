@@ -130,28 +130,28 @@ func b2mib(x uint64) int {
 }
 func (this *Volume) AdjustAnnotationsOn(pv v1.PersistentVolume) (dirty bool) {
 	free := b2mib(this.Stats.Free)
-	oldFreeStr, ok := pv.Annotations[common.FreeAnnotation]
+	oldFreeStr, ok := pv.Annotations[common.PvFreeAnnotation]
 	if ok {
 		oldFree, _ := strconv.Atoi(oldFreeStr)
 		if oldFree != free {
 			dirty = true
-			pv.Annotations[common.FreeAnnotation] = strconv.Itoa(free)
+			pv.Annotations[common.PvFreeAnnotation] = strconv.Itoa(free)
 		}
 	} else {
 		dirty = true
-		pv.Annotations[common.FreeAnnotation] = strconv.Itoa(free)
+		pv.Annotations[common.PvFreeAnnotation] = strconv.Itoa(free)
 	}
 	size := b2mib(this.Stats.Size)
-	oldSizeStr, ok := pv.Annotations[common.SizeAnnotation]
+	oldSizeStr, ok := pv.Annotations[common.PvSizeAnnotation]
 	if ok {
 		oldSize, _ := strconv.Atoi(oldSizeStr)
 		if oldSize != size {
 			dirty = true
-			pv.Annotations[common.SizeAnnotation] = strconv.Itoa(size)
+			pv.Annotations[common.PvSizeAnnotation] = strconv.Itoa(size)
 		}
 	} else {
 		dirty = true
-		pv.Annotations[common.SizeAnnotation] = strconv.Itoa(size)
+		pv.Annotations[common.PvSizeAnnotation] = strconv.Itoa(size)
 	}
 	return dirty
 }

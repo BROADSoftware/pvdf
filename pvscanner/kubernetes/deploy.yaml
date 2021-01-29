@@ -114,6 +114,12 @@ spec:
             - --rootFsPath=/host/root
             - --procPath=/host/proc
             - --period=60s
+          env:
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: spec.nodeName
           image: pvdf/pvscanner:latest
           imagePullPolicy: Always
           name: speaker
