@@ -22,9 +22,9 @@ var tplvmCmd = &cobra.Command{
 			if format == "text" {
 				tw := new(tabwriter.Writer)
 				tw.Init(os.Stdout, 8, 8, 1, '\t', 0)
-				_, _ = fmt.Fprintf(tw, "STORAGE CLASS\tDEVICE CLASS\tNODE\tFREE\tFSTYPE")
+				_, _ = fmt.Fprintf(tw, "STORAGE CLASS\tDEVICE CLASS\tFSTYPE\tNODE\tSIZE\tFREE\t%%USED")
 				for _, tpLvm := range tpLvmList {
-					_, _ = fmt.Fprintf(tw, "\n%s\t%s\t%s\t%s\t%s", tpLvm.StorageClass, tpLvm.DeviceClass, tpLvm.Node, bytes2human(tpLvm.Free, unit), tpLvm.Fstype)
+					_, _ = fmt.Fprintf(tw, "\n%s\t%s\t%s\t%s\t%s\t%s\t%s", tpLvm.StorageClass, tpLvm.DeviceClass, tpLvm.Fstype, tpLvm.Node, bytes2human(tpLvm.Size, unit), bytes2human(tpLvm.Free, unit), percentToString(tpLvm.Used_pc))
 				}
 				_, _ = fmt.Fprintf(tw, "\n")
 				_ = tw.Flush()

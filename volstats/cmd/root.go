@@ -22,7 +22,7 @@ var unit string // A (Auto), B, K, Ki, M, Mi, G, Gi, T, Ti, P, Pi
 
 func init() {
 	rootCmd.PersistentFlags().StringVarP(&clientgo.Kubeconfig, "kubeconfig", "k", "", "kubeconfig file" )
-	rootCmd.PersistentFlags().StringVarP(&logging.Level, "loglevel", "l", "INFO", "Log level" )
+	rootCmd.PersistentFlags().StringVarP(&logging.Level, "logLevel", "l", "INFO", "Log level" )
 	rootCmd.PersistentFlags().BoolVarP(&logging.LogJson, "logJson", "j", false, "kubeconfig file" )
 	rootCmd.PersistentFlags().StringVarP(&format, "format", "f", "text", "Output format" )
 	rootCmd.PersistentFlags().StringVarP(&unit, "unit", "u", "A", "Unit for storage values display" )

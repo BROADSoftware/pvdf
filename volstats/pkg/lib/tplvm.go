@@ -1,6 +1,8 @@
 package lib
 
 import (
+	"fmt"
+	"github.com/BROADSoftware/pvdf/shared/common"
 	coreV1 "k8s.io/api/core/v1"
 	storageV1 "k8s.io/api/storage/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -13,6 +15,8 @@ type TpLvm struct {
 	node *coreV1.Node
 	storageClass *storageV1.StorageClass
 	Free int64
+	Size int64
+	Used_pc int
 	DeviceClass string
 	StorageClass string
 	Node string
@@ -69,10 +73,24 @@ func NewTpLvmList(clientSet *kubernetes.Clientset) TpLvmList {
 					}
 				} else {
 					free, _ := strconv.ParseInt(v, 10, 64)
+					sizeKey := fmt.Sprintf(common.SizeTopolvmAnnotation, dc)
+					sizeStr, ok := node.Annotations[sizeKey]
+					var size int64 = -1
+					var used_pc = -1
+					if ok {
+						size, _ = strconv.ParseInt(sizeStr, 10, 54)
+					} else {
+						log.Warnf("Unable to find '%s' annotation on this node. Is pvscanner daemon set deployed ?")
+					}
+					if size != -1 && free != -1 {
+						used_pc = int(((size-free)*100)/size)
+					}
 					tplvm := TpLvm{
 						node: &nodeList.Items[i],
 						storageClass: storageClass,
 						Free: free,
+						Size : size,
+						Used_pc: used_pc,
 						DeviceClass: dc,
 					}
 					tplvm.fillin()

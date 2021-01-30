@@ -20,16 +20,17 @@ var log = logging.Log.WithFields(logrus.Fields{})
 
 func main() {
 	var nodeName string
-	var noVgScan bool
-	flag.StringVar(&logging.Level, "loglevel", "INFO", "Log message verbosity")
-	flag.BoolVar(&logging.LogJson, "logjson", false, "logs in JSON")
+	var noTplvm bool
+	flag.StringVar(&logging.Level, "logLevel", "INFO", "Log message verbosity")
+	flag.BoolVar(&logging.LogJson, "logJson", false, "logs in JSON")
 	flag.StringVar(&clientgo.Kubeconfig, "kubeconfig", "", "kubeconfig file")
-	flag.StringVar(&lib.ProcPath, "procpath", "/proc", "proc device path")
-	flag.StringVar(&lib.RootfsPath, "rootfspath", "/", "root FS path")
-	statfsTimeout := flag.String("statfstimeout", "5s", "Timeout on syscall failure")
+	flag.StringVar(&lib.ProcPath, "procPath", "/proc", "proc device path")
+	flag.StringVar(&lib.RootfsPath, "rootFsPath", "/", "root FS path")
+	statfsTimeout := flag.String("statFsTimeout", "5s", "Timeout on syscall failure")
 	period := flag.String("period", "60s", "Scan period")
-	flag.StringVar(&nodeName, "nodename", "", "Node name")
-	flag.BoolVar(&noVgScan, "novgscan", false, "No LVM VG scan")
+	flag.StringVar(&nodeName, "nodeName", "", "Node name")
+	flag.BoolVar(&noTplvm, "noTopoLvm", false, "No Topolvm VG scan")
+	flag.StringVar(&lib.LvmdConfigFile, "lvmdConfig", "/etc/topolvm/lvmd.yaml", "Topolvm/lvmd config file path")
 	flag.Parse()
 
 	logging.ConfigLogger()
@@ -41,12 +42,12 @@ func main() {
 	if lib.Period, err = time.ParseDuration(*period); err != nil {
 		log.Fatalf("Value '%s' is invalid as a duration for period paramter", *period)
 	}
-	if !noVgScan {
+	if !noTplvm {
 		if nn := os.Getenv("NODE_NAME"); nn != "" {
 			nodeName = nn
 		}
 		if nodeName == "" {
-			log.Fatalf("NODE_NAME env variable is not defined, no --nodname parameter and --novgscan is not set")
+			log.Fatalf("NODE_NAME env variable is not defined, no --nodname parameter and --notplvm is not set")
 		}
 	}
 
@@ -56,7 +57,7 @@ func main() {
 	for true {
 		log.Debugf("-------------------------------------------------")
 		workOnPv(clientSet)
-		if !noVgScan {
+		if !noTplvm {
 			workOnNode(clientSet, nodeName)
 		}
 		time.Sleep(lib.Period)
@@ -74,10 +75,23 @@ func adjustAnnotation(node *v1.Node, annotation string, value string) bool {
 	}
 }
 
+func removeTraingB(x string) string {
+	if strings.HasSuffix(x, "B") {
+		return x[:len(x)-1]
+	} else {
+		return x
+	}
+}
+
 func workOnNode(clientset *kubernetes.Clientset, nodeName string) {
-	lvmVgs, err := lib.GetLvmVg()
+	vgByName, err := lib.GetVgByName()
 	if err != nil {
 		log.Errorf("Unable to scan LVM VG:%v", err)
+		return
+	}
+	lvmdConfig, err := lib.LoadLvmdConfig()
+	if err != nil {
+		log.Errorf("Unable to load lvmd config file '%s':%v. Topolvm information will be incomplete", lib.LvmdConfigFile, err)
 		return
 	}
 	node, err := clientset.CoreV1().Nodes().Get(nodeName, metav1.GetOptions{})
@@ -85,37 +99,31 @@ func workOnNode(clientset *kubernetes.Clientset, nodeName string) {
 		log.Errorf("Unable to load node '%s':%v", nodeName, err)
 		return
 	}
-	vgcount := 0
-	vgList := ""
-	vgListSep := ""
 	dirty := false
-	for i := 0; i < len(lvmVgs.Report); i++ {
-		for j := 0; j < len(lvmVgs.Report[i].Vg); j++ {
-			log.Debugf("LVM VolumeGroup:%s  size:%s  free:%s\n", lvmVgs.Report[i].Vg[j].VgName, lvmVgs.Report[i].Vg[j].VgSize, lvmVgs.Report[i].Vg[j].VgFree)
-			vgname := lvmVgs.Report[i].Vg[j].VgName
-			vgList = vgList + vgListSep + vgname
-			vgListSep = ","
-			vgcount++
-			dirty = dirty || adjustAnnotation(node, fmt.Sprintf(common.NodeVgSizeAnnotation, vgname), lvmVgs.Report[i].Vg[j].VgSize )
-			dirty = dirty || adjustAnnotation(node, fmt.Sprintf(common.NodeVgFreeAnnotation, vgname), lvmVgs.Report[i].Vg[j].VgFree )
+	dccount := 0
+	for _, dc := range lvmdConfig.DeviceClasses {
+		vg, ok := vgByName[dc.VolumeGroup]
+		if ok {
+			dirty = dirty || adjustAnnotation(node, fmt.Sprintf(common.SizeTopolvmAnnotation, dc.Name), removeTraingB(vg.VgSize) )
+			dccount++
+		} else {
+			log.Warnf("Unable to find volumeGroup '%s' for deviceClass '%s'", dc.VolumeGroup, dc.Name)
 		}
 	}
-	dirty = dirty || adjustAnnotation(node, common.NodeVgListAnnotation, vgList )
 	if dirty {
 		_, err = clientset.CoreV1().Nodes().Update(node)
 		if err != nil {
 			log.Errorf("Unable to udpate usage information on Node '%s': %v", node.Name, err)
 		} else {
 			for k, v := range node.Annotations {
-				if strings.HasPrefix(k, common.RootAnnotation) {
+				if strings.Contains(k, common.RootAnnotation) {
 					log.Infof("Udpate usage information for Node '%s':%s:%s", node.Name, k, v)
 				}
 			}
 		}
 	}
-	log.Infof("%d LVM VGs has been found", vgcount)
+	log.Infof("%d Topolvm deviceClass has been found", dccount)
 }
-
 
 func workOnPv(clientSet *kubernetes.Clientset) {
 	// Retrieve all PV from api server
@@ -172,3 +180,4 @@ func workOnPv(clientSet *kubernetes.Clientset) {
 	}
 	log.Infof("%d PVs has been scanned", pvCount)
 }
+
