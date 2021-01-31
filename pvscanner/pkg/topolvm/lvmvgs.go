@@ -1,10 +1,11 @@
-package lib
+package topolvm
 
 import (
+	"context"
 	"encoding/json"
-	"io/ioutil"
-	"os"
-	"os/exec"
+	"fmt"
+	"net"
+	"net/http"
 )
 
 type LvmVg struct {
@@ -23,35 +24,36 @@ type LvmVgReport struct {
 	} `json:"report"`
 }
 
-func getLvmVgReport() (*LvmVgReport, error) {
-	args := []string { "vgs", "--unit", "b", "--reportformat", "json", "--unbuffered"}
-	c:= exec.Command("/sbin/lvm", args...)
-	c.Stderr = os.Stderr
-	stdout, err := c.StdoutPipe()
+
+func NewVgsClient(socketName string) http.Client {
+	httpc := http.Client{
+		Transport: &http.Transport{
+			DialContext: func(_ context.Context, _, _ string) (net.Conn, error) {
+				return net.Dial("unix", socketName, )
+			},
+		},
+	}
+	return httpc
+}
+
+func getLvmVgReport(vgsClient http.Client) (*LvmVgReport, error) {
+	response, err := vgsClient.Get("http://localhost/vgs")
 	if err != nil {
 		return nil, err
 	}
-	if err := c.Start(); err != nil {
-		return nil, err
+	if response.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("Received error %d from vgsd daemon", response.StatusCode)
 	}
-	out, err := ioutil.ReadAll(stdout)
-	if err != nil {
-		return nil, err
-	}
-	if err := c.Wait(); err != nil {
-		return nil, err
-	}
-	//fmt.Printf("out:%s\n", string(out))
 	var vgs LvmVgReport
-	err = json.Unmarshal(out, &vgs)
+	err = json.NewDecoder(response.Body).Decode(&vgs)
 	if err != nil {
 		return nil, err
 	}
 	return &vgs, nil
 }
 
-func GetVgByName() (map[string]LvmVg, error) {
-	report, err := getLvmVgReport()
+func GetVgByName(vgsClient http.Client) (map[string]LvmVg, error) {
+	report, err := getLvmVgReport(vgsClient)
 	if err != nil {
 		return nil, err
 	}

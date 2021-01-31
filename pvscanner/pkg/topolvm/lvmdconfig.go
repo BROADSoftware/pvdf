@@ -1,11 +1,10 @@
-package lib
+package topolvm
 
 import (
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
 )
 
-var LvmdConfigFile string
 
 type LvmdConfig struct {
 	SocketName string	`yaml:"socket-name"`
@@ -18,8 +17,8 @@ type LvmdConfig struct {
 }
 
 
-func LoadLvmdConfig() (*LvmdConfig, error ){
-	content, err := ioutil.ReadFile(LvmdConfigFile)
+func LoadLvmdConfig(lvmdConfigFile string) (*LvmdConfig, error ){
+	content, err := ioutil.ReadFile(lvmdConfigFile)
 	if err != nil {
 		return nil, err
 	}

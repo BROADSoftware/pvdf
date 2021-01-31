@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/BROADSoftware/pvdf/pvscanner/pkg/lib"
+	"github.com/BROADSoftware/pvdf/pvscanner/pkg/topolvm"
 	"github.com/BROADSoftware/pvdf/shared/common"
 	"github.com/BROADSoftware/pvdf/shared/pkg/clientgo"
 	"github.com/BROADSoftware/pvdf/shared/pkg/logging"
@@ -11,6 +12,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
+	"net/http"
 	"os"
 	"strings"
 	"time"
@@ -20,7 +22,9 @@ var log = logging.Log.WithFields(logrus.Fields{})
 
 func main() {
 	var nodeName string
-	var noTplvm bool
+	var vgsd bool
+	var vgsdSocketName string
+	var lvmdConfigFile string
 	flag.StringVar(&logging.Level, "logLevel", "INFO", "Log message verbosity")
 	flag.BoolVar(&logging.LogJson, "logJson", false, "logs in JSON")
 	flag.StringVar(&clientgo.Kubeconfig, "kubeconfig", "", "kubeconfig file")
@@ -28,9 +32,10 @@ func main() {
 	flag.StringVar(&lib.RootfsPath, "rootFsPath", "/", "root FS path")
 	statfsTimeout := flag.String("statFsTimeout", "5s", "Timeout on syscall failure")
 	period := flag.String("period", "60s", "Scan period")
+	flag.BoolVar(&vgsd, "vgsd", false, "Use vgsd daemon")
 	flag.StringVar(&nodeName, "nodeName", "", "Node name")
-	flag.BoolVar(&noTplvm, "noTopoLvm", false, "No Topolvm VG scan")
-	flag.StringVar(&lib.LvmdConfigFile, "lvmdConfig", "/etc/topolvm/lvmd.yaml", "Topolvm/lvmd config file path")
+	flag.StringVar(&lvmdConfigFile, "lvmdConfig", "/etc/topolvm/lvmd.yaml", "Topolvm/lvmd config file path")
+	flag.StringVar(&vgsdSocketName, "vgsdSocketName", "/run/vgsd/vgsd.sock", "Socket name of vgsd daemon")
 	flag.Parse()
 
 	logging.ConfigLogger()
@@ -42,23 +47,38 @@ func main() {
 	if lib.Period, err = time.ParseDuration(*period); err != nil {
 		log.Fatalf("Value '%s' is invalid as a duration for period paramter", *period)
 	}
-	if !noTplvm {
+	if vgsd {
 		if nn := os.Getenv("NODE_NAME"); nn != "" {
 			nodeName = nn
 		}
 		if nodeName == "" {
-			log.Fatalf("NODE_NAME env variable is not defined, no --nodname parameter and --notplvm is not set")
+			log.Fatalf("NODE_NAME env variable is not defined, no --nodname parameter and --vgsd is set")
 		}
 	}
-
 	log.Infof("pvscanner start. Will scan PV every %s. logLevel is '%s'", *period, logging.Level)
 
 	clientSet := clientgo.GetClientSet()
+	var vgsClient http.Client
+	var lvmdConfig *topolvm.LvmdConfig
+	if vgsd {
+		lvmdConfig, err = topolvm.LoadLvmdConfig(lvmdConfigFile)
+		if err != nil {
+			log.Warnf("Unable to load lvmd config file '%s':%v. Topolvm information will be incomplete", lvmdConfigFile, err)
+			vgsd = false
+		}
+		vgsClient = topolvm.NewVgsClient(vgsdSocketName)
+		// Test access
+		_, err := topolvm.GetVgByName(vgsClient)
+		if err != nil {
+			log.Errorf("Unable to access vgsd daemon:%v. Topolvm information will be incomplete", err)
+			vgsd = false
+		}
+	}
 	for true {
 		log.Debugf("-------------------------------------------------")
 		workOnPv(clientSet)
-		if !noTplvm {
-			workOnNode(clientSet, nodeName)
+		if vgsd {
+			workOnNode(clientSet, vgsClient, nodeName, lvmdConfig)
 		}
 		time.Sleep(lib.Period)
 	}
@@ -83,20 +103,15 @@ func removeTraingB(x string) string {
 	}
 }
 
-func workOnNode(clientset *kubernetes.Clientset, nodeName string) {
-	vgByName, err := lib.GetVgByName()
+func workOnNode(clientset *kubernetes.Clientset, vgsClient http.Client, nodeName string, lvmdConfig *topolvm.LvmdConfig) {
+	vgByName, err := topolvm.GetVgByName(vgsClient)
 	if err != nil {
-		log.Errorf("Unable to scan LVM VG:%v", err)
-		return
-	}
-	lvmdConfig, err := lib.LoadLvmdConfig()
-	if err != nil {
-		log.Errorf("Unable to load lvmd config file '%s':%v. Topolvm information will be incomplete", lib.LvmdConfigFile, err)
+		log.Errorf("Unable to access vgsd daemon:%v. VolumeGroup size information will not be updted", err)
 		return
 	}
 	node, err := clientset.CoreV1().Nodes().Get(nodeName, metav1.GetOptions{})
 	if err != nil {
-		log.Errorf("Unable to load node '%s':%v", nodeName, err)
+		log.Errorf("Unable to load node '%s':%v. VolumeGroup size information will not be updted", nodeName, err)
 		return
 	}
 	dirty := false
@@ -122,7 +137,7 @@ func workOnNode(clientset *kubernetes.Clientset, nodeName string) {
 			}
 		}
 	}
-	log.Infof("%d Topolvm deviceClass has been found", dccount)
+	log.Infof("%d Topolvm deviceClasses has been found", dccount)
 }
 
 func workOnPv(clientSet *kubernetes.Clientset) {

@@ -1,0 +1,16 @@
+[Unit]
+Description=vgsd provide a socket server to grab VG stats
+Wants=lvm2-monitor.service
+After=lvm2-monitor.service
+
+[Service]
+Type=simple
+Restart=on-failure
+RestartForceExitStatus=SIGPIPE
+ExecStartPre=/bin/mkdir -p /run/vgsd
+ExecStart=/opt/sbin/vgsd
+
+[Install]
+WantedBy=multi-user.target
+
+
