@@ -15,10 +15,18 @@ import (
 var log = logging.Log.WithFields(logrus.Fields{})
 
 func main() {
+	var version bool
 	var socketName string
+	flag.BoolVar(&version, "version", false, "Display current version")
 	flag.StringVar(&logging.Level, "logLevel", "INFO", "Log message verbosity")
 	flag.BoolVar(&logging.LogJson, "logJson", false, "logs in JSON")
 	flag.StringVar(&socketName, "socketName", "/run/vgsd/vgsd.sock", "Socket name")
+	flag.Parse()
+
+	if version {
+		fmt.Printf("Version: %s\n", Version)
+		os.Exit(0)
+	}
 
 	logging.ConfigLogger()
 
@@ -27,7 +35,7 @@ func main() {
 	if err != nil && !os.IsNotExist(err) {
 		panic(fmt.Sprintf("Unable to remove %s: %v", socketName, err))
 	}
-	log.Infof("vgsd starts. logLevel is '%s'", logging.Level)
+	log.Infof("vgsd starts. version:%s logLevel:%s", Version, logging.Level)
 	listener, err := net.Listen("unix", socketName)
 	if err != nil {
 		panic(fmt.Sprintf("Unable to listen on %s: %s", socketName, err))

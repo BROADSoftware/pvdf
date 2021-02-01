@@ -21,10 +21,12 @@ import (
 var log = logging.Log.WithFields(logrus.Fields{})
 
 func main() {
+	var version bool
 	var nodeName string
 	var vgsd bool
 	var vgsdSocketName string
 	var lvmdConfigPath string
+	flag.BoolVar(&version, "version", false, "Display current version")
 	flag.StringVar(&logging.Level, "logLevel", "INFO", "Log message verbosity")
 	flag.BoolVar(&logging.LogJson, "logJson", false, "logs in JSON")
 	flag.StringVar(&clientgo.Kubeconfig, "kubeconfig", "", "kubeconfig file")
@@ -39,6 +41,11 @@ func main() {
 	flag.Parse()
 
 	logging.ConfigLogger()
+
+	if version {
+		fmt.Printf("Version: %s\n", lib.Version)
+		os.Exit(0)
+	}
 
 	var err error
 	if lib.StatfsTimeout, err = time.ParseDuration(*statfsTimeout); err != nil {
@@ -55,7 +62,7 @@ func main() {
 			log.Fatalf("NODE_NAME env variable is not defined, no --nodname parameter and --vgsd is set")
 		}
 	}
-	log.Infof("pvscanner start. Will scan PV every %s. logLevel is '%s'", *period, logging.Level)
+	log.Infof("pvscanner start. version:%s. logLevel:%s. Will scan PV every %s", lib.Version, logging.Level, *period)
 
 	clientSet := clientgo.GetClientSet()
 	var vgsClient http.Client

@@ -26,8 +26,8 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -a -o pvscanne
 
 # Use distroless as minimal base image to package the manager binary
 # Refer to https://github.com/GoogleContainerTools/distroless and https://github.com/GoogleContainerTools/distroless/tree/master/base for more details
-FROM centos:7
-#FROM gcr.io/distroless/static
+#FROM centos:7
+FROM gcr.io/distroless/static
 WORKDIR /
 COPY --from=builder /workspace/pvscanner/pvscanner /pvscanner
 
