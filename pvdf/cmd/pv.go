@@ -3,8 +3,8 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/BROADSoftware/pvdf/pvdf/pkg/lib"
 	"github.com/BROADSoftware/pvdf/shared/pkg/clientgo"
-	"github.com/BROADSoftware/pvdf/volstats/pkg/lib"
 	"github.com/spf13/cobra"
 	"os"
 	"sort"

@@ -1,4 +1,4 @@
-module github.com/BROADSoftware/pvdf/volstats
+module github.com/BROADSoftware/pvdf/pvdf
 
 go 1.15
 

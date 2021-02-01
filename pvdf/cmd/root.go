@@ -13,7 +13,7 @@ import (
 var log = logging.Log.WithFields(logrus.Fields{})
 
 var rootCmd = &cobra.Command{
-	Use:   "pvstatus",
+	Use:   "pvdf",
 	Short: "A PV usage display tool",
 }
 
@@ -23,8 +23,8 @@ var unit string // A (Auto), B, K, Ki, M, Mi, G, Gi, T, Ti, P, Pi
 func init() {
 	rootCmd.PersistentFlags().StringVarP(&clientgo.Kubeconfig, "kubeconfig", "k", "", "kubeconfig file" )
 	rootCmd.PersistentFlags().StringVarP(&logging.Level, "logLevel", "l", "INFO", "Log level" )
-	rootCmd.PersistentFlags().BoolVarP(&logging.LogJson, "logJson", "j", false, "kubeconfig file" )
-	rootCmd.PersistentFlags().StringVarP(&format, "format", "f", "text", "Output format" )
+	rootCmd.PersistentFlags().BoolVarP(&logging.LogJson, "logJson", "j", false, "Logs in JSON" )
+	rootCmd.PersistentFlags().StringVarP(&format, "format", "f", "text", "Output format (text or json)" )
 	rootCmd.PersistentFlags().StringVarP(&unit, "unit", "u", "A", "Unit for storage values display" )
 	rootCmd.PersistentPreRun = func(cmd *cobra.Command, args []string) {
 		logging.ConfigLogger()

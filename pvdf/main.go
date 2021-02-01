@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/BROADSoftware/pvdf/volstats/cmd"
+	"github.com/BROADSoftware/pvdf/pvdf/cmd"
 )
 
 func main() {

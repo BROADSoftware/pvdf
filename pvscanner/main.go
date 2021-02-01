@@ -24,7 +24,7 @@ func main() {
 	var nodeName string
 	var vgsd bool
 	var vgsdSocketName string
-	var lvmdConfigFile string
+	var lvmdConfigPath string
 	flag.StringVar(&logging.Level, "logLevel", "INFO", "Log message verbosity")
 	flag.BoolVar(&logging.LogJson, "logJson", false, "logs in JSON")
 	flag.StringVar(&clientgo.Kubeconfig, "kubeconfig", "", "kubeconfig file")
@@ -34,7 +34,7 @@ func main() {
 	period := flag.String("period", "60s", "Scan period")
 	flag.BoolVar(&vgsd, "vgsd", false, "Use vgsd daemon")
 	flag.StringVar(&nodeName, "nodeName", "", "Node name")
-	flag.StringVar(&lvmdConfigFile, "lvmdConfig", "/etc/topolvm/lvmd.yaml", "Topolvm/lvmd config file path")
+	flag.StringVar(&lvmdConfigPath, "lvmdConfigPath", "/etc/topolvm/lvmd.yaml", "Topolvm/lvmd config file path")
 	flag.StringVar(&vgsdSocketName, "vgsdSocketName", "/run/vgsd/vgsd.sock", "Socket name of vgsd daemon")
 	flag.Parse()
 
@@ -61,9 +61,9 @@ func main() {
 	var vgsClient http.Client
 	var lvmdConfig *topolvm.LvmdConfig
 	if vgsd {
-		lvmdConfig, err = topolvm.LoadLvmdConfig(lvmdConfigFile)
+		lvmdConfig, err = topolvm.LoadLvmdConfig(lvmdConfigPath)
 		if err != nil {
-			log.Warnf("Unable to load lvmd config file '%s':%v. Topolvm information will be incomplete", lvmdConfigFile, err)
+			log.Warnf("Unable to load lvmd config file '%s':%v. Topolvm information will be incomplete", lvmdConfigPath, err)
 			vgsd = false
 		}
 		vgsClient = topolvm.NewVgsClient(vgsdSocketName)
