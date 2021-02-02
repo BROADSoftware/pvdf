@@ -50,17 +50,22 @@ func init() {
 
 func sortPv(l lib.PvExtList) {
 	sort.Slice(l, func(i, j int) bool {
-		// Sort order is namespace/storageclass/node/name
+		// Sort order is namespace/storageclass/pod/node/name
 		if l[i].Namespace != l[j].Namespace {
 			return l[i].Namespace < l[j].Namespace
 		} else {
 			if l[i].StorageClass != l[j].StorageClass {
 				return l[i].StorageClass < l[j].StorageClass
 			} else {
-				if l[i].Node != l[j].Node {
-					return l[i].Node < l[j].Node
+				if l[i].PodName != l[j].PodName {
+					return l[i].PodName < l[j].PodName
 				} else {
-					return l[i].Name < l[j].Name
+					if l[i].Node != l[j].Node {
+						return l[i].Node < l[j].Node
+					} else {
+						return l[i].Name < l[j].Name
+					}
+
 				}
 			}
 		}

@@ -2,7 +2,7 @@
 
 VERSION=v0.1.0
 
-UNCOMMITTED="no"
+UNCOMMITTED="yes"
 
 
 if [ "x$GITHUB_TOKEN" == "x" ]; then
@@ -14,7 +14,7 @@ MYDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 BASE=$MYDIR
 cd $BASE || exit
 
-mkdir -p $BASE/dist
+
 
 cd $BASE/pvscanner/kubernetes || exit
 cat <<EOF >./kustomization.yaml
@@ -22,7 +22,8 @@ resources:
 - deploy.yaml
 EOF
 kustomize edit set image pvdf/pvscanner=pvdf/pvscanner:$VERSION
-kustomize build . >$BASE/dist/deploy.yaml
+mkdir -p kustomized
+kustomize build . >./kustomized/deploy.yaml
 
 
 cd $BASE

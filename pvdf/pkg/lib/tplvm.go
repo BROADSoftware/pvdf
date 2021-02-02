@@ -80,7 +80,7 @@ func NewTpLvmList(clientSet *kubernetes.Clientset) TpLvmList {
 					if ok {
 						size, _ = strconv.ParseInt(sizeStr, 10, 54)
 					} else {
-						log.Warnf("Unable to find '%s' annotation on this node. Is pvscanner daemon set deployed ?")
+						log.Debugf("Unable to find '%s' annotation on this node. Is pvscanner daemon set deployed ?", sizeKey)
 					}
 					if size != -1 && free != -1 {
 						used_pc = int(((size-free)*100)/size)
