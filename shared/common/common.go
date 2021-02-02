@@ -11,5 +11,6 @@ var PvSizeAnnotation = RootAnnotation + "/size_mib"
 //var NodeVgSizeAnnotation = RootAnnotation + "/vg_%s_size"
 
 // %s will be replaced by deviceClass
-var SizeTopolvmAnnotation = "size.topolvm." + RootAnnotation + "/%s"
+var SizeTopolvmAnnotationPrefix = "size.topolvm." + RootAnnotation
+var SizeTopolvmAnnotation = SizeTopolvmAnnotationPrefix + "/%s"
 

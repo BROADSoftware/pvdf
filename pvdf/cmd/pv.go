@@ -6,10 +6,15 @@ import (
 	"github.com/BROADSoftware/pvdf/pvdf/pkg/lib"
 	"github.com/BROADSoftware/pvdf/shared/pkg/clientgo"
 	"github.com/spf13/cobra"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
 	"os"
 	"sort"
+	"strings"
 	"text/tabwriter"
 )
+
+var noScannerCheck bool
 
 var pvCmd = &cobra.Command{
 	Use:   "pv",
@@ -18,6 +23,12 @@ var pvCmd = &cobra.Command{
 		clientSet := clientgo.GetClientSet()
 		pvExtList := lib.NewPvExtList(clientSet)
 		if len(pvExtList) > 0 {
+			if !noScannerCheck {
+				if !checkDaemon(clientSet, pvExtList) {
+					log.Fatalf("'pvscanner' daemonset seemns not being running properly. Data will be invalid. You can skip this test by providing --noScannerCheck option\n")
+					os.Exit(2)
+				}
+			}
 			sortPv(pvExtList)
 			if format == "text" {
 				tw := new(tabwriter.Writer)
@@ -45,7 +56,9 @@ var pvCmd = &cobra.Command{
 }
 
 func init() {
+	pvCmd.PersistentFlags().BoolVarP(&noScannerCheck, "noScannerCheck", "n", false, "Don't perform security pvscanner daemonset check." )
 	rootCmd.AddCommand(pvCmd)
+
 }
 
 func sortPv(l lib.PvExtList) {
@@ -65,9 +78,33 @@ func sortPv(l lib.PvExtList) {
 					} else {
 						return l[i].Name < l[j].Name
 					}
-
 				}
 			}
 		}
 	})
+}
+
+// This is a security. We check a pvscanner pod in the pvdf-system exists on each concerned node.
+// If not there is big chance stats will be obsoleted.
+func checkDaemon(clientSet *kubernetes.Clientset, pvExtList lib.PvExtList) bool {
+	podList, err := clientSet.CoreV1().Pods("pvdf-system").List(metav1.ListOptions{})
+	if err != nil {
+		log.Errorf("Unable to fetch pods in pvdf-system namespace: '%v'", err)
+		return false
+	}
+	nodeWithRunningPod := make(map[string]struct{})
+	for _, pod := range podList.Items {
+		if strings.Contains(pod.Name, "pvscanner") && pod.Status.ContainerStatuses[0].State.Running != nil {
+			node := pod.Spec.NodeName
+			nodeWithRunningPod[node] = struct{}{}
+		}
+	}
+	nodeSet := pvExtList.GetNodesSet(clientSet)
+	for node, _ := range nodeSet {
+		if _, ok := nodeWithRunningPod[node]; !ok {
+			log.Warnf("Unable to find a 'pvscanner...' pod running on node '%s'", node)
+			return false
+		}
+	}
+	return true
 }

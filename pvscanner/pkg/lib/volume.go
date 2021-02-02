@@ -2,8 +2,8 @@ package lib
 
 import (
 	"fmt"
-	"golang.org/x/sys/unix"
 	"github.com/BROADSoftware/pvdf/shared/common"
+	"golang.org/x/sys/unix"
 	v1 "k8s.io/api/core/v1"
 	"strconv"
 	"strings"

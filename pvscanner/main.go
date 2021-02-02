@@ -75,11 +75,11 @@ func main() {
 		}
 		vgsClient = topolvm.NewVgsClient(vgsdSocketName)
 		// Test access
-		_, err := topolvm.GetVgByName(vgsClient)
-		if err != nil {
-			log.Errorf("Unable to access vgsd daemon:%v. Topolvm information will be incomplete", err)
-			vgsd = false
-		}
+		//_, err := topolvm.GetVgByName(vgsClient)
+		//if err != nil {
+		//	log.Errorf("Unable to access vgsd daemon:%v. Topolvm information will be incomplete", err)
+		//	vgsd = false
+		//}
 	}
 	for true {
 		log.Debugf("-------------------------------------------------")
@@ -93,7 +93,7 @@ func main() {
 
 func adjustAnnotation(node *v1.Node, annotation string, value string) bool {
 	if v, ok := node.Annotations[annotation]; (!ok || v != value) {
-		log.Debugf("Update annotation %s = %s", annotation, value)
+		log.Infof("Udpate usage information %s:%s", annotation, value)
 		node.Annotations[annotation] = string(value)
 		return true
 	} else {
@@ -111,14 +111,29 @@ func removeTraingB(x string) string {
 }
 
 func workOnNode(clientset *kubernetes.Clientset, vgsClient http.Client, nodeName string, lvmdConfig *topolvm.LvmdConfig) {
-	vgByName, err := topolvm.GetVgByName(vgsClient)
-	if err != nil {
-		log.Errorf("Unable to access vgsd daemon:%v. VolumeGroup size information will not be updted", err)
-		return
-	}
 	node, err := clientset.CoreV1().Nodes().Get(nodeName, metav1.GetOptions{})
 	if err != nil {
 		log.Errorf("Unable to load node '%s':%v. VolumeGroup size information will not be updted", nodeName, err)
+		return
+	}
+	vgByName, err := topolvm.GetVgByName(vgsClient)
+	if err != nil {
+		log.Warnf("Unable to access vgsd daemon:%v. VolumeGroup size will be unknown", err)
+		// Will cleanup all related annotation
+		dirty := false
+		for k, _ := range node.Annotations {
+			if strings.HasPrefix(k, common.SizeTopolvmAnnotationPrefix) {
+				delete(node.Annotations, k)
+				dirty = true
+			}
+		}
+		if dirty {
+			log.Infof("Cleanup all %s/* annotations", common.SizeTopolvmAnnotationPrefix )
+			_, err = clientset.CoreV1().Nodes().Update(node)
+			if err != nil {
+				log.Errorf("Unable to udpate usage information on Node '%s': %v", node.Name, err)
+			}
+		}
 		return
 	}
 	dirty := false
@@ -136,12 +151,6 @@ func workOnNode(clientset *kubernetes.Clientset, vgsClient http.Client, nodeName
 		_, err = clientset.CoreV1().Nodes().Update(node)
 		if err != nil {
 			log.Errorf("Unable to udpate usage information on Node '%s': %v", node.Name, err)
-		} else {
-			for k, v := range node.Annotations {
-				if strings.Contains(k, common.RootAnnotation) {
-					log.Infof("Udpate usage information for Node '%s':%s:%s", node.Name, k, v)
-				}
-			}
 		}
 	}
 	log.Infof("%d Topolvm deviceClasses has been found", dccount)

@@ -2,7 +2,7 @@
 
 VERSION=v0.1.0
 
-UNCOMMITTED="yes"
+UNCOMMITTED="no"
 
 
 if [ "x$GITHUB_TOKEN" == "x" ]; then

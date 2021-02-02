@@ -152,3 +152,13 @@ func (this PvExtList) fillinPod(clientSet *kubernetes.Clientset) {
 	}
 }
 
+
+func (this PvExtList) GetNodesSet(clientSet *kubernetes.Clientset) map[string]struct{} {
+	r := make(map[string]struct{})
+	for _, pvExt := range this {
+		if pvExt.Node != "" {
+			r[pvExt.Node] = struct{}{}
+		}
+	}
+	return r
+}
