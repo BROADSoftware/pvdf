@@ -74,12 +74,6 @@ func main() {
 			vgsd = false
 		}
 		vgsClient = topolvm.NewVgsClient(vgsdSocketName)
-		// Test access
-		//_, err := topolvm.GetVgByName(vgsClient)
-		//if err != nil {
-		//	log.Errorf("Unable to access vgsd daemon:%v. Topolvm information will be incomplete", err)
-		//	vgsd = false
-		//}
 	}
 	for true {
 		log.Debugf("-------------------------------------------------")
@@ -141,7 +135,7 @@ func workOnNode(clientset *kubernetes.Clientset, vgsClient http.Client, nodeName
 	for _, dc := range lvmdConfig.DeviceClasses {
 		vg, ok := vgByName[dc.VolumeGroup]
 		if ok {
-			dirty = dirty || adjustAnnotation(node, fmt.Sprintf(common.SizeTopolvmAnnotation, dc.Name), removeTraingB(vg.VgSize) )
+			dirty = adjustAnnotation(node, fmt.Sprintf(common.SizeTopolvmAnnotation, dc.Name), removeTraingB(vg.VgSize) ) || dirty	// Warning, order is important.
 			dccount++
 		} else {
 			log.Warnf("Unable to find volumeGroup '%s' for deviceClass '%s'", dc.VolumeGroup, dc.Name)

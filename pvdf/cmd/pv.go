@@ -99,12 +99,13 @@ func checkDaemon(clientSet *kubernetes.Clientset, pvExtList lib.PvExtList) bool 
 			nodeWithRunningPod[node] = struct{}{}
 		}
 	}
+	missingNodes := 0
 	nodeSet := pvExtList.GetNodesSet(clientSet)
 	for node, _ := range nodeSet {
 		if _, ok := nodeWithRunningPod[node]; !ok {
 			log.Warnf("Unable to find a 'pvscanner...' pod running on node '%s'", node)
-			return false
+			missingNodes++
 		}
 	}
-	return true
+	return missingNodes == 0
 }

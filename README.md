@@ -64,7 +64,7 @@ pvscanner-n7tng   1/1     Running   0          87m
 pvscanner-phbnf   1/1     Running   0          87m
 pvscanner-xmhc7   1/1     Running   0          87m
 ```
-You should have one pod per node (Except the ones on the Control Plane).
+You should have one pod per node (Except the ones of the Control Plane).
 
 ### `pvdf` client installation
 
@@ -277,6 +277,21 @@ Feb 02 00:57:39 s1 vgsd[16707]: time="2021-02-02T00:57:39+01:00" level=info msg=
 
 If you are an Ansible user, you will find an Ansible role to perform all these tasks [at this location](https://github.com/BROADSoftware/ezck8splugins/tree/master/k8s/topolvm/roles/vgsd) 
 
+Once this extension installed, the topolvm subcommand provide this type of report:
+
+```
+$ pvdf topolvm --unit Gi
+STORAGE CLASS	DEVICE CLASS	FSTYPE	NODE	SIZE	FREE	%USED
+topolvm-hdd	hdd		xfs	s1	49Gi	19Gi	60%
+topolvm-hdd	hdd		xfs	s2	49Gi	29Gi	40%
+topolvm-hdd	hdd		xfs	s3	49Gi	9Gi	80%
+topolvm-nvme	nvme		xfs	s1	99Gi	99Gi	0%
+topolvm-nvme	nvme		xfs	s2	99Gi	99Gi	0%
+topolvm-nvme	nvme		xfs	s3	99Gi	99Gi	0%
+topolvm-ssd	ssd		xfs	s1	79Gi	47Gi	40%
+topolvm-ssd	ssd		xfs	s2	79Gi	47Gi	40%
+topolvm-ssd	ssd		xfs	s3	79Gi	37Gi	52%
+```
 
 ## Architecture
 
