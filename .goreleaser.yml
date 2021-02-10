@@ -19,8 +19,6 @@ release:
   prerelease: true
   extra_files:
     - glob: pvscanner/kubernetes/kustomized/deploy.yaml
-    - glob: vgsd/vgsd
-    - glob: vgsd/systemd/vgsd.service
 archives:
   - replacements:
       darwin: Darwin

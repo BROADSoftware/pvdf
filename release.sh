@@ -15,10 +15,11 @@ cd $BASE || exit
 
 cd $BASE/pvscanner/kubernetes || exit
 cat <<EOF >./kustomization.yaml
+# release.sh generated file. Do not edit
 resources:
 - deploy.yaml
 EOF
-kustomize edit set image pvdf/pvscanner=pvdf/pvscanner:$VERSION
+kustomize edit set image registry.gitlab.com/pvdf/pvscanner=registry.gitlab.com/pvdf/pvscanner:$VERSION
 mkdir -p kustomized
 kustomize build . >./kustomized/deploy.yaml
 
