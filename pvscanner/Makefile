@@ -1,7 +1,7 @@
 
 # Image URL to use all building/pushing image targets
 VERSION ?= latest
-IMG ?= pvdf/pvscanner:$(VERSION)
+IMG ?= registry.gitlab.com/pvdf/pvscanner:$(VERSION)
 
 # Currently, only unix executable are generated.
 GOARGS = GOOS=linux GOARCH=amd64
@@ -23,4 +23,5 @@ img: version
 push: img
 	docker push ${IMG}
 
-
+save: img
+	docker save -o ./pvscanner.img ${IMG}

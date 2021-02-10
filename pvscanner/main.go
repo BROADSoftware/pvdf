@@ -12,7 +12,6 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-	"net/http"
 	"os"
 	"strings"
 	"time"
@@ -23,21 +22,23 @@ var log = logging.Log.WithFields(logrus.Fields{})
 func main() {
 	var version bool
 	var nodeName string
-	var vgsd bool
-	var vgsdSocketName string
+	var isTopolvm bool
 	var lvmdConfigPath string
+	var statfsTimeout string
+	var period string
 	flag.BoolVar(&version, "version", false, "Display current version")
 	flag.StringVar(&logging.Level, "logLevel", "INFO", "Log message verbosity")
 	flag.BoolVar(&logging.LogJson, "logJson", false, "logs in JSON")
 	flag.StringVar(&clientgo.Kubeconfig, "kubeconfig", "", "kubeconfig file")
-	flag.StringVar(&lib.ProcPath, "procPath", "/proc", "proc device path")
 	flag.StringVar(&lib.RootfsPath, "rootFsPath", "/", "root FS path")
-	statfsTimeout := flag.String("statFsTimeout", "5s", "Timeout on syscall failure")
-	period := flag.String("period", "60s", "Scan period")
-	flag.BoolVar(&vgsd, "vgsd", false, "Use vgsd daemon")
+	flag.StringVar(&statfsTimeout, "statFsTimeout", "5s", "Timeout on syscall failure")
+	flag.StringVar(&period, "period", "60s", "Scan period")
+	flag.BoolVar(&isTopolvm, "topolvm", false, "Lookup Topolvm LVM VolumeGroup size")
 	flag.StringVar(&nodeName, "nodeName", "", "Node name")
 	flag.StringVar(&lvmdConfigPath, "lvmdConfigPath", "/etc/topolvm/lvmd.yaml", "Topolvm/lvmd config file path")
-	flag.StringVar(&vgsdSocketName, "vgsdSocketName", "/run/vgsd/vgsd.sock", "Socket name of vgsd daemon")
+	flag.BoolVar(&topolvm.Containerized, "containerized", false, "Is running inside container")
+	flag.StringVar(&topolvm.Nsenter, "nsenter", "/usr/bin/nsenter", "nsenter unix command path")
+	flag.StringVar(&topolvm.Lvm, "lvm", "/sbin/lvm", "lvm unix command path")
 	flag.Parse()
 
 	logging.ConfigLogger()
@@ -48,13 +49,13 @@ func main() {
 	}
 
 	var err error
-	if lib.StatfsTimeout, err = time.ParseDuration(*statfsTimeout); err != nil {
-		log.Fatalf("Value '%s' is invalid as a duration for statFsTimeout paramter", *statfsTimeout)
+	if lib.StatfsTimeout, err = time.ParseDuration(statfsTimeout); err != nil {
+		log.Fatalf("Value '%s' is invalid as a duration for statFsTimeout paramter", statfsTimeout)
 	}
-	if lib.Period, err = time.ParseDuration(*period); err != nil {
-		log.Fatalf("Value '%s' is invalid as a duration for period paramter", *period)
+	if lib.Period, err = time.ParseDuration(period); err != nil {
+		log.Fatalf("Value '%s' is invalid as a duration for period paramter", period)
 	}
-	if vgsd {
+	if isTopolvm {
 		if nn := os.Getenv("NODE_NAME"); nn != "" {
 			nodeName = nn
 		}
@@ -62,24 +63,22 @@ func main() {
 			log.Fatalf("NODE_NAME env variable is not defined, no --nodname parameter and --vgsd is set")
 		}
 	}
-	log.Infof("pvscanner start. version:%s. logLevel:%s. Will scan PV every %s", lib.Version, logging.Level, *period)
+	log.Infof("pvscanner start. version:%s. logLevel:%s. Will scan PV every %s", lib.Version, logging.Level, period)
 
 	clientSet := clientgo.GetClientSet()
-	var vgsClient http.Client
 	var lvmdConfig *topolvm.LvmdConfig
-	if vgsd {
+	if isTopolvm {
 		lvmdConfig, err = topolvm.LoadLvmdConfig(lvmdConfigPath)
 		if err != nil {
-			log.Warnf("Unable to load lvmd config file '%s':%v. Topolvm information will be incomplete", lvmdConfigPath, err)
-			vgsd = false
+			log.Warnf("Unable to load Topolvm lvmd config file '%s':%v. May be Topolvm is not deployed on this node.", lvmdConfigPath, err)
+			isTopolvm = false
 		}
-		vgsClient = topolvm.NewVgsClient(vgsdSocketName)
 	}
 	for true {
 		log.Debugf("-------------------------------------------------")
 		workOnPv(clientSet)
-		if vgsd {
-			workOnNode(clientSet, vgsClient, nodeName, lvmdConfig)
+		if isTopolvm {
+			workOnNode(clientSet, nodeName, lvmdConfig)
 		}
 		time.Sleep(lib.Period)
 	}
@@ -104,15 +103,15 @@ func removeTraingB(x string) string {
 	}
 }
 
-func workOnNode(clientset *kubernetes.Clientset, vgsClient http.Client, nodeName string, lvmdConfig *topolvm.LvmdConfig) {
+func workOnNode(clientset *kubernetes.Clientset, nodeName string, lvmdConfig *topolvm.LvmdConfig) {
 	node, err := clientset.CoreV1().Nodes().Get(nodeName, metav1.GetOptions{})
 	if err != nil {
-		log.Errorf("Unable to load node '%s':%v. VolumeGroup size information will not be updted", nodeName, err)
+		log.Errorf("Unable to load node '%s':%v. VolumeGroup size information will not be updated", nodeName, err)
 		return
 	}
-	vgByName, err := topolvm.GetVgByName(vgsClient)
+	vgByName, err := topolvm.GetVgByName()
 	if err != nil {
-		log.Warnf("Unable to access vgsd daemon:%v. VolumeGroup size will be unknown", err)
+		log.Warnf("Unable to read VolumeGroup size:%v. VolumeGroup size will be unknown", err)
 		// Will cleanup all related annotation
 		dirty := false
 		for k, _ := range node.Annotations {

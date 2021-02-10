@@ -7,3 +7,6 @@ import (
 
 var log = logging.Log.WithFields(logrus.Fields{})
 
+var Containerized bool
+var Nsenter string
+var Lvm string

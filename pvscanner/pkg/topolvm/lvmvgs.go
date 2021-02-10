@@ -1,12 +1,12 @@
 package topolvm
 
 import (
-	"context"
 	"encoding/json"
-	"fmt"
-	"net"
-	"net/http"
+	"github.com/BROADSoftware/pvdf/pvscanner/pkg/lib"
+	"io/ioutil"
+	"os/exec"
 )
+
 
 type LvmVg struct {
 	VgName    string `json:"vg_name"`
@@ -25,35 +25,57 @@ type LvmVgReport struct {
 }
 
 
-func NewVgsClient(socketName string) http.Client {
-	httpc := http.Client{
-		Transport: &http.Transport{
-			DialContext: func(_ context.Context, _, _ string) (net.Conn, error) {
-				return net.Dial("unix", socketName, )
-			},
-		},
+// wrapExecCommand calls cmd with args but wrapped to run on the host
+func wrapExecCommand(cmd string, args ...string) *exec.Cmd {
+	if Containerized {
+		args = append([]string{"--root=" + lib.RootfsPath, "-t", "1", cmd}, args...)
+		cmd = Nsenter
 	}
-	return httpc
+	c := exec.Command(cmd, args...)
+	return c
 }
 
-func getLvmVgReport(vgsClient http.Client) (*LvmVgReport, error) {
-	response, err := vgsClient.Get("http://localhost/vgs")
+func getLvmVgReport() (*LvmVgReport, error) {
+	args := []string { "vgs", "--unit", "b", "--reportformat", "json", "--unbuffered"}
+	c := wrapExecCommand(Lvm, args...)
+	stderr, err := c.StderrPipe()
 	if err != nil {
 		return nil, err
 	}
-	if response.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("Received error %d from vgsd daemon", response.StatusCode)
+	//c.Stderr = os.Stderr
+	stdout, err := c.StdoutPipe()
+	if err != nil {
+		return nil, err
 	}
+	if err := c.Start(); err != nil {
+		return nil, err
+	}
+	stderrData, err := ioutil.ReadAll(stderr)
+	if err != nil {
+		return nil, err
+	}
+	out, err := ioutil.ReadAll(stdout)
+	if err != nil {
+		return nil, err
+	}
+	if err := c.Wait(); err != nil {
+		return nil, err
+	}
+	if len(stderrData) > 0 {
+		log.Debugf("Stderr:%s", stderrData)
+	}
+	//fmt.Printf("out:%s\n", string(out))
 	var vgs LvmVgReport
-	err = json.NewDecoder(response.Body).Decode(&vgs)
+	err = json.Unmarshal(out, &vgs)
 	if err != nil {
 		return nil, err
 	}
 	return &vgs, nil
 }
 
-func GetVgByName(vgsClient http.Client) (map[string]LvmVg, error) {
-	report, err := getLvmVgReport(vgsClient)
+
+func GetVgByName() (map[string]LvmVg, error) {
+	report, err := getLvmVgReport()
 	if err != nil {
 		return nil, err
 	}

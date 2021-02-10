@@ -11,15 +11,14 @@ var log = logging.Log.WithFields(logrus.Fields{})
 
 
 //  Cli Parameters. Check main.go
-var ProcPath string
+//var ProcPath string
 var RootfsPath string
 var StatfsTimeout time.Duration
 var Period time.Duration
 
-
-
 func procFilePath(name string) string {
-	return filepath.Join(ProcPath, name)
+	//return filepath.Join(ProcPath, name)
+	return filepath.Join(filepath.Join(RootfsPath, "proc"), name)
 }
 
 func rootfsFilePath(name string) string {

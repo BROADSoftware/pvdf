@@ -23,13 +23,16 @@ WORKDIR /workspace/pvscanner
 # Build
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -a -o pvscanner main.go
 
+FROM ubuntu:20.04
 
-# Use distroless as minimal base image to package the manager binary
-# Refer to https://github.com/GoogleContainerTools/distroless and https://github.com/GoogleContainerTools/distroless/tree/master/base for more details
-#FROM centos:7
-FROM gcr.io/distroless/static
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update \
+    && apt-get -y install --no-install-recommends \
+        file \
+        xfsprogs \
+    && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /
 COPY --from=builder /workspace/pvscanner/pvscanner /pvscanner
-
 
 CMD ["/pvscanner"]
