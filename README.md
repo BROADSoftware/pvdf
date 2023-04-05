@@ -1,5 +1,10 @@
 # pvdf
 
+## TODO
+- Fix 'No topolvm storage class' (Update topolvm annotation token) 
+- Remove the test on pvscanner (Must be in pvdf-system namespace). Instead add some timestamp to information
+- Or refactor the logic. (Also, insert in some monitoring stuff)
+
 ## Overview
 
 `pvdf` stand for 'PersistentVolume Disk Free'. The idea is to provide a quick an useful view of all disk usage on a Kubernetes cluster hosting some PersistentVolume.
